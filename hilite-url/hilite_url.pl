@@ -29,8 +29,10 @@ sub hilite_url {
 	$color = sprintf("\e[%sm", $color);
 
 	# Add Colours
-    # $data =~ s/(https?:\/\/[^\s]+)/$color\1\e[00m/g;
-		$data =~ s/(https?:\/\/[^\s]+)/\e[07m\1\e[07m/g;
+		# $data =~ s/(https?:\/\/[^\s]+)/\e[07m\1\e[07m/g;
+		# $data =~ s/(https?:\/\/[^\s]+(?!\s+))/\e[07m\1\e[07m/g;
+		# $data =~ s/(https?:\/\/\S*)/\e[07m\1\e[27m/g;
+		$data =~ s,((https?|ftp|file)://\S+),\e[07m\1\e[27m,g;
 
 	# Let it flow
 	Irssi::signal_continue($server, $data, $nick, $mask, $target);

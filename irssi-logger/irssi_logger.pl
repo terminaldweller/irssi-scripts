@@ -102,7 +102,7 @@ sub connect_db {
 
 sub write_db {
     my ($nick, $message, $target) = @_;
-    if ($target eq "#news" || $target eq "#supersonic" || $target eq "#bookz") {
+    if ($target eq "#news" || $target eq "#supersonic" || $target eq "#bookz" || $target eq "#subsplease") {
         # dont do anything
     } else {
         my @vals;

@@ -102,19 +102,23 @@ sub connect_db {
 
 sub write_db {
     my ($nick, $message, $target) = @_;
-    my @vals;
-    my $date = strftime("%Y-%m-%d %H:%M:%S", localtime);
+    if ($target eq "#news" || $target eq "#supersonic" || $target eq "#bookz") {
+        # dont do anything
+    } else {
+        my @vals;
+        my $date = strftime("%Y-%m-%d %H:%M:%S", localtime);
 
-    $dbh = connect_db() unless $dbh;
+        $dbh = connect_db() unless $dbh;
 
-    push(@vals, $date);
-    push(@vals, $nick);
-    push(@vals, $message);
-    push(@vals, $target);
+        push(@vals, $date);
+        push(@vals, $nick);
+        push(@vals, $message);
+        push(@vals, $target);
 
-    defined or $_ = "" for @vals;
+        defined or $_ = "" for @vals;
 
-    $dbh->do($sql, undef, @vals) || Irssi::print("Can't log to DB! " . DBI::errstr);
+        $dbh->do($sql, undef, @vals) || Irssi::print("Can't log to DB! " . DBI::errstr);
+    }
 }
 
 sub log_me {

@@ -1858,7 +1858,7 @@ sub cmd_ctrl_d {
     if (not defined $count) {
         $count = $window->{height} / 2;
     }
-    $window->view()->scroll($count);
+    $window->command("scrollback goto +$count");
 
     Irssi::statusbar_items_redraw('more');
     return (undef, undef);
@@ -1872,7 +1872,7 @@ sub cmd_ctrl_u {
     if (not defined $count) {
         $count = $window->{height} / 2;
     }
-    $window->view()->scroll($count * -1);
+    $window->command("scrollback goto -$count");
 
     Irssi::statusbar_items_redraw('more');
     return (undef, undef);
@@ -1882,7 +1882,8 @@ sub cmd_ctrl_f {
     my ($count, $pos, $repeat) = @_;
 
     my $window = Irssi::active_win();
-    $window->view()->scroll($count * $window->{height});
+    my $mycount = $count * $window->{height};
+    $window->command("scrollback goto +$mycount");
 
     Irssi::statusbar_items_redraw('more');
     return (undef, undef);
@@ -1891,7 +1892,12 @@ sub cmd_ctrl_f {
 sub cmd_ctrl_b {
     my ($count, $pos, $repeat) = @_;
 
-    return cmd_ctrl_f($count * -1, $pos, $repeat);
+    my $window = Irssi::active_win();
+    my $mycount = $count * $window->{height};
+    $window->command("scrollback goto -$mycount");
+
+    Irssi::statusbar_items_redraw('more');
+    return (undef, undef);
 }
 
 sub cmd_ctrl_wj {

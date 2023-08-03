@@ -2990,13 +2990,24 @@ sub handle_command_cmd {
    if ($key == 13) {
       my $window = Irssi::active_win();
       my $server = Irssi::active_server();
-      my $current_window_item_string = $server->{tag}."/".$window->{active}->{name};
-      if (exists $dead_channels{$current_window_item_string}) {
-         # we dont do anything
-      }else{
+      if (defined $window->{active}->{name} && defined $server->{tag}) {
+         my $current_window_item_string = $server->{tag}."/".$window->{active}->{name};
+         if (exists $dead_channels{$current_window_item_string}) {
+            # we dont do anything
+         }else{
+            _commit_line();
+            return 0; # don't call _stop()
+         }
+      } else {
          _commit_line();
          return 0; # don't call _stop()
       }
+      # if (exists $dead_channels{$current_window_item_string}) {
+      #    # we dont do anything
+      # }else{
+      #    _commit_line();
+      #    return 0; # don't call _stop()
+      # }
     }
 
     my $map;

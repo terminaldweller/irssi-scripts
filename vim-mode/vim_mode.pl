@@ -2635,11 +2635,11 @@ sub vim_mode_cmd {
 
     my $mode_str = '';
     if ($mode == M_INS) {
-        $mode_str = 'Insert';
+        $mode_str = 'INS ';
     } elsif ($mode == M_EX) {
-        $mode_str = '%_Ex%_';
+        $mode_str = 'EX ';
     } else {
-        $mode_str = '%_Command%_';
+        $mode_str = 'CMD ';
         if ($register ne '"' or $numeric_prefix or $operator or $movement or
             $pending_map) {
             my $partial = '';
@@ -2664,6 +2664,39 @@ sub vim_mode_cmd {
         }
     }
     return $mode_str;
+}
+sub vim_mode_cmd_partial {
+    my $mode_str = '';
+    my $partial = '';
+    if ($mode == M_INS) {
+        $mode_str = 'INS ';
+    } elsif ($mode == M_EX) {
+        $mode_str = 'EX ';
+    } else {
+        $mode_str = 'CMD ';
+        if ($register ne '"' or $numeric_prefix or $operator or $movement or
+            $pending_map) {
+            if ($register ne '"') {
+                $partial .= '"' . $register;
+            }
+            if ($numeric_prefix) {
+                $partial .= $numeric_prefix;
+            }
+            if ($operator) {
+                $partial .= $operator->{char};
+            }
+            if ($movement) {
+                $partial .= $movement->{char};
+            }
+            if (defined $pending_map) {
+                $partial .= $pending_map;
+            }
+            $partial = _parse_partial_command_reverse($partial);
+            $partial =~ s/\\/\\\\\\\\/g;
+            $mode_str .= " ($partial)";
+        }
+    }
+    return $partial;
 }
 
 sub vim_wins_data {
@@ -2692,6 +2725,11 @@ sub vim_wins_data {
 sub vim_exp_mode {
     my ($server, $witem, $arg) = @_;
     return vim_mode_cmd();
+}
+
+sub vim_exp_mode_partial {
+   my ($server, $witem, $arg) = @_;
+   return vim_mode_cmd_partial();
 }
 
 sub vim_exp_wins {
@@ -2799,6 +2837,7 @@ sub got_key {
         my $should_stop = handle_command_cmd($key);
         _stop() if $should_stop;
         Irssi::statusbar_items_redraw("vim_mode");
+      Irssi::statusbar_items_redraw("uberprompt");
 
     } elsif ($mode == M_EX) {
 
@@ -3258,6 +3297,7 @@ sub vim_mode_init {
     Irssi::statusbar_item_register ('vim_mode',    0, 'vim_mode_cb');
     Irssi::statusbar_item_register ('vim_windows', 0, 'b_windows_cb');
 
+    Irssi::expando_create('vim_cmd_mode_partial' => \&vim_exp_mode_partial, {});
     Irssi::expando_create('vim_cmd_mode' => \&vim_exp_mode, {});
     Irssi::expando_create('vim_wins'     => \&vim_exp_wins, {});
 
@@ -3795,4 +3835,118 @@ sub ex_history_show {
         $win->print("$i " . $ex_history[$i] . $flag);
     }
 }
+Irssi::settings_add_str('misc','vim_prompt_begin_ins', '%z005f00%k%9 INSERT %w%k');
+Irssi::settings_add_str('misc','vim_prompt_begin_cmd', '%z0087d7%k%9 NORMAL %w%k');
+Irssi::settings_add_str('misc','vim_prompt_begin_ex', '%zff5f5f%k%9 EX %w%k');
+Irssi::settings_add_str('misc','vim_prompt_end_ins', '%N%k%Z005f00%9%N');
+Irssi::settings_add_str('misc','vim_prompt_end_cmd', '%N%k%Z0087d7%9%N');
+Irssi::settings_add_str('misc','vim_prompt_end_ex', '%N%k%Zff5f5f%9%k%Zff5f5f');
+
+sub vim_prompt_begin {
+    my $prompt;
+    my $cmd_mode = Irssi::parse_special('$vim_cmd_mode', 0, 0);
+    if (index($cmd_mode, "INS") != -1) {
+        my $prompt_begin = Irssi::settings_get_str('vim_prompt_begin_ins');
+        $prompt=$prompt_begin;
+    }
+    if (index($cmd_mode, "CMD") != -1) {
+        my $prompt_begin = Irssi::settings_get_str('vim_prompt_begin_cmd');
+        $prompt=$prompt_begin;
+    }
+    if (index($cmd_mode, "EX") != -1) {
+        my $prompt_begin = Irssi::settings_get_str('vim_prompt_begin_ex');
+        $prompt=$prompt_begin;
+    }
+   if ($register ne '"' or $numeric_prefix or $operator or $movement or
+       $pending_map) {
+       my $partial = '';
+       if ($register ne '"') {
+           $partial .= '"' . $register;
+       }
+       if ($numeric_prefix) {
+           $partial .= $numeric_prefix;
+       }
+       if ($operator) {
+           $partial .= $operator->{char};
+       }
+       if ($movement) {
+           $partial .= $movement->{char};
+       }
+       if (defined $pending_map) {
+           $partial .= $pending_map;
+       }
+       $partial = _parse_partial_command_reverse($partial);
+       $partial =~ s/\\/\\\\\\\\/g;
+       # $prompt .= " ($partial)";
+   }
+    return $prompt
+}
+
+sub vim_begin {
+    my ($server, $witem, $arg) = @_;
+    return vim_prompt_begin();
+}
+
+Irssi::expando_create('vim_prompt_begin' => \&vim_begin , {});
+
+Irssi::expando_create('vim_prompt_end', sub {
+    my $prompt;
+    my $cmd_mode = Irssi::parse_special('$vim_cmd_mode', 0, 0);
+    if (index($cmd_mode, "INS") != -1) {
+        my $prompt_begin = Irssi::settings_get_str('vim_prompt_end_ins');
+        $prompt=$prompt_begin;
+    }
+    if (index($cmd_mode, "CMD") != -1) {
+        my $prompt_begin = Irssi::settings_get_str('vim_prompt_end_cmd');
+        $prompt=$prompt_begin;
+    }
+    if (index($cmd_mode, "EX") != -1) {
+        my $prompt_begin = Irssi::settings_get_str('vim_prompt_end_ex');
+        $prompt=$prompt_begin;
+    }
+    return $prompt
+}, {});
+
+Irssi::expando_create('vim_prompt_empty', sub {
+    my $prompt;
+    my $cmd_mode = Irssi::parse_special('$vim_cmd_mode', 0, 0);
+    if (index($cmd_mode, "INS") != -1) {
+        $prompt="%z005f00%k%9 INSERT "."%N%k%Z005f00%9%N"
+    }
+    if (index($cmd_mode, "CMD") != -1) {
+        $prompt="%z0087d7%k%9 NORMAL "."%N%k%Z0087d7%9%N"
+    }
+    if (index($cmd_mode, "EX") != -1) {
+        $prompt="%zff5f5f%k%9 EX "."%N%k%Zff5f5f%9%k%Zff5f5f"
+    }
+    return $prompt
+}, {});
+sub vim_prompt_partial() {
+   my $partial = '';
+   if ($register ne '"' or $numeric_prefix or $operator or $movement or
+       $pending_map) {
+       $partial = '';
+       if ($register ne '"') {
+           $partial .= '"' . $register;
+       }
+       if ($numeric_prefix) {
+           $partial .= $numeric_prefix;
+       }
+       if ($operator) {
+           $partial .= $operator->{char};
+       }
+       if ($movement) {
+           $partial .= $movement->{char};
+       }
+       if (defined $pending_map) {
+           $partial .= $pending_map;
+       }
+       $partial = _parse_partial_command_reverse($partial);
+       $partial =~ s/\\/\\\\\\\\/g;
+   }
+
+   return $partial
+}
+Irssi::expando_create('vim_prompt_partial' => \&vim_prompt_partial, {});
+
 vim_mode_init();

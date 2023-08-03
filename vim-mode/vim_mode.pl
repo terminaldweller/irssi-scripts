@@ -935,6 +935,9 @@ my @ex_buf;
 my @ex_history;
 my $ex_history_index = 0;
 
+# list of channels where we want a read-onlly mode
+my %dead_channels = ();
+
 # we are waiting for another mapped key (e.g. g pressed, but there are
 # multiple mappings like gg gE etc.)
 my $pending_map = undef;
@@ -2696,6 +2699,14 @@ sub vim_mode_cmd_partial {
             $mode_str .= " ($partial)";
         }
     }
+   my $window = Irssi::active_win();
+   my $server = Irssi::active_server();
+   if (defined $window->{active}->{name} && defined $server->{tag}) {
+      my $current_window_item_string = $server->{tag}."/".$window->{active}->{name};
+      if (exists $dead_channels{$current_window_item_string}) {
+         $partial = "DEADEND ".$partial;
+      }
+   }
     return $partial;
 }
 
@@ -2977,8 +2988,15 @@ sub handle_command_cmd {
 
    # @DEVI
    if ($key == 13) {
-       _commit_line();
-       return 0; # don't call _stop()
+      my $window = Irssi::active_win();
+      my $server = Irssi::active_server();
+      my $current_window_item_string = $server->{tag}."/".$window->{active}->{name};
+      if (exists $dead_channels{$current_window_item_string}) {
+         # we dont do anything
+      }else{
+         _commit_line();
+         return 0; # don't call _stop()
+      }
     }
 
     my $map;
@@ -3301,6 +3319,7 @@ sub vim_mode_init {
     Irssi::expando_create('vim_cmd_mode' => \&vim_exp_mode, {});
     Irssi::expando_create('vim_wins'     => \&vim_exp_wins, {});
 
+    Irssi::settings_add_str('misc', 'vim_dead_channels', '');
 
     # Register all available settings.
     foreach my $name (keys %$settings) {
@@ -3321,6 +3340,7 @@ sub vim_mode_init {
         add_map($char, $commands->{$char});
     }
 
+    %dead_channels = map{$_ => undef} split /\s+/, Irssi::settings_get_str('vim_dead_channels');
     # Load the vim_moderc file if it exists.
     ex_source('source');
 
@@ -3356,6 +3376,8 @@ sub setup_changed {
             _setting_set('cmd_seq', $settings->{cmd_seq}->{value});
         }
     }
+
+    %dead_channels = map{$_ => undef} split /\s+/, Irssi::settings_get_str('vim_dead_channels');
 
     my $new_utf8 = _setting_get('utf8');
     if ($new_utf8 != $settings->{utf8}->{value}) {

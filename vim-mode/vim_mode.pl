@@ -2707,6 +2707,9 @@ sub vim_mode_cmd_partial {
          $partial = "DEADEND ".$partial;
       }
    }
+   if ($window->{immortal}) {
+      $partial = "Immortal/".$partial;
+   }
     return $partial;
 }
 
